@@ -1,0 +1,202 @@
+#include <iostream>  
+#include <string>  
+#include <vector>  
+#include <chrono>  
+#include <cstdlib>  
+#include <ctime>  
+
+std::string generateRandomString(int length) {  
+ static const char characters[] =  
+ "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";  
+
+ std::string randomString;  
+ int charsLength = sizeof(characters) - 1;  
+
+ for (int i = 0; i < length; ++i) {  
+ randomString += characters[rand() % charsLength];  
+    }
+
+ return randomString;  
+}
+
+// Функция для поиска LCS полным перебором  
+int lcsBruteForce(const std::string& X, const std::string& Y) {  
+// Получаем длины строк X и Y 
+ int N = X.length();  
+ int M = Y.length();  
+// Инициализируем переменные для хранения максимальной длины LCS и самой подпоследовательности 
+ int maxLCS = 0;  
+ std::string maxSubsequence;  
+
+// Итерируемся по всем подмножествам элементов строки X 
+ for (int i = 0; i < (1 << N); ++i) {  
+// Создаем текущую подпоследовательность
+ std::string subsequence; 
+ for (int j = 0; j < N; ++j) { 
+// Если j-й бит i-го числа равен 1, добавляем соответствующий элемент строки X в подпоследовательность
+ if (i & (1 << j)) { 
+                subsequence += X[j];
+            }
+        }
+
+// Получаем длину текущей подпоследовательности
+        int subLen = subsequence.length();
+// Переменные для отслеживания текущего индекса в подпоследовательности и в строке Y
+        int ptr1 = 0, ptr2 = 0;
+// Переменная для отслеживания текущей длины LCS
+        int currentLCS = 0;
+
+// Ищем LCS путем сравнения символов в текущей подпоследовательности и строке Y
+        while (ptr1 < subLen && ptr2 < M) {
+            if (subsequence[ptr1] == Y[ptr2]) {
+                ptr1++;
+                currentLCS++;
+            }
+            ptr2++;
+        }
+
+// Если текущая LCS больше предыдущей, обновляем значения максимальной LCS и подпоследовательности
+        if (currentLCS > maxLCS) {
+            maxLCS = currentLCS;
+            maxSubsequence = subsequence;
+        }
+    }
+
+    return maxLCS;
+}
+
+
+
+// Функция для поиска LCS методом динамического программирования
+int lcsDP(const std::string& X, const std::string& Y) {
+    int N = X.length();
+    int M = Y.length();
+
+    std::vector<std::vector<int>> LCS(N + 1, std::vector<int>(M + 1, 0));
+
+    for (int i = 1; i <= N; ++i) {
+        for (int j = 1; j <= M; ++j) {
+            if (X[i - 1] == Y[j - 1]) {
+                LCS[i][j] = LCS[i - 1][j - 1] + 1;
+            }
+            else {
+                LCS[i][j] = std::max(LCS[i - 1][j], LCS[i][j - 1]);
+            }
+        }
+    }
+
+    return LCS[N][M];
+}
+
+int main() {
+    setlocale(LC_ALL, "RUS");
+    const int length = 100000; // Фиксированная длина строки
+    std::string X = generateRandomString(length);
+    std::string Y = generateRandomString(length);
+
+    auto t1 = std::chrono::steady_clock::now();
+    int resultBruteForce = lcsBruteForce(X, Y);
+    auto t2 = std::chrono::steady_clock::now();
+
+    auto t3 = std::chrono::steady_clock::now();
+    int resultDP = lcsDP(X, Y);
+    auto t4 = std::chrono::steady_clock::now();
+
+    auto durationBF = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    auto durationDP = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
+    std::cout << "Time (Полный перебор): " << durationBF / 1000000.0 << " seconds\n";
+    std::cout << "Time (Динамический перебор): " << durationDP / 1000000.0 << " seconds\n";
+    return 0;
+}
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <chrono>
+#include <cstdlib>
+#include <ctime>
+ 
+struct Process {
+    int start;
+    int finish;
+};
+ 
+bool compareProcesses(const Process& p1, const Process& p2) {
+    return p1.finish < p2.finish;
+}
+ 
+std::vector<Process> get_max_activities_greedy(const std::vector<Process>& processes) {
+    std::vector<Process> sortedProcesses = processes;
+    std::sort(sortedProcesses.begin(), sortedProcesses.end(), compareProcesses);
+ 
+    std::vector<Process> result;
+    result.push_back(sortedProcesses[0]);
+ 
+    int current = 0;
+    for (int next = 1; next < sortedProcesses.size(); next++) {
+        if (sortedProcesses[next].start >= sortedProcesses[current].finish) {
+            result.push_back(sortedProcesses[next]);
+            current = next;
+        }
+    }
+ 
+    return result;
+}
+std::vector<Process> get_max_activities_bruteforce(const std::vector<Process>& processes) {
+    std::vector<Process> maxSet;
+    int maxSetSize = 0;
+    int N = processes.size();
+ 
+    for (int mask = 0; mask < (1 << N); mask++) {
+        std::vector<Process> currentSet;
+        for (int i = 0; i < N; i++) {
+            if (mask & (1 << i)) {
+                currentSet.push_back(processes[i]);
+            }
+        }
+        bool isCompatible = true;
+        for (int i = 0; i < currentSet.size(); i++) {
+            for (int j = i + 1; j < currentSet.size(); j++) {
+                if (currentSet[i].start < currentSet[j].finish && currentSet[i].finish > currentSet[j].start) {
+                    isCompatible = false;
+                    break;
+                }
+            }
+            if (!isCompatible) {
+                break;
+            }
+        }
+ 
+        if (isCompatible && currentSet.size() > maxSetSize) {
+            maxSet = currentSet;
+            maxSetSize = currentSet.size();
+        }
+    }
+ 
+    return maxSet;
+}
+int main() {
+    setlocale(LC_ALL, "RUS");
+    const int numProcesses = 10000; // Фиксированное количество процессов
+    std::vector<Process> processes;
+    srand(time(0));
+    for (int i = 0; i < numProcesses; i++) {
+        Process process;
+        process.start = rand() % 100;
+        process.finish = process.start + (rand() % 10 + 1); // Длительность от 1 до 10
+        processes.push_back(process);
+    }
+    auto t1 = std::chrono::steady_clock::now();
+    std::vector<Process> resultGreedy = get_max_activities_greedy(processes);
+    auto t2 = std::chrono::steady_clock::now();
+ 
+    auto t3 = std::chrono::steady_clock::now();
+    std::vector<Process> resultBruteforce = get_max_activities_bruteforce(processes);
+    auto t4 = std::chrono::steady_clock::now();
+ 
+    auto durationGreedy = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    auto durationBruteforce = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
+    std::cout << "Время (Полный перебор): " << durationBruteforce / 1000000.0 << " seconds\n";
+    std::cout << "Время (Жадный алгоритм): " << durationGreedy / 1000000.0 << " seconds\n";
+    return 0;
+}
+ 
